@@ -2,9 +2,9 @@
 ***
 Deep neural networks for classification and regression tasks are trained with novel abstention losses such that that they can say "IDK" (I Don't Know) when they are not confident. Unlike many methods for attaching uncertainty to neural network predictions post-training, the abstention loss is applied during training to identify, and preferentially learn from, the more confident samples - leading to more accurate predictions.
 
-* For classification tasks, we impose an additional _abstention class_ into which the network can place a sample when it is unsure of the answer. We also introduce the NotWrong loss which performs particularly well with the CAN.  Based on Thulasidasan (2020) but with substantial updates, this version uses a PID controller to fix the abstention rate to a user-defined value during training. Results are published in Barnes and Barnes (2021a).
+* For classification tasks, we impose an additional _abstention class_ into which the network can place a sample when it is unsure of the answer. We also introduce the NotWrong loss which performs particularly well with the CAN.  Based on Thulasidasan (2020) but with substantial updates, this version uses a PID controller to fix the abstention rate to a user-defined value during training. Results are published in [Barnes and Barnes (2021a)](https://arxiv.org/abs/2104.08281).
 
-* For regression tasks, the abstention loss works by incorporating uncertainty in the network's prediction based on a standard computer science method. The abstention loss is designed to determine the optimal abstention fraction, or abstain on a user-defined fraction via a PID controller. Results are published in Barnes and Barnes (2021b).
+* For regression tasks, the abstention loss works by incorporating uncertainty in the network's prediction based on a standard computer science method. The abstention loss is designed to determine the optimal abstention fraction, or abstain on a user-defined fraction via a PID controller. Results are published in [Barnes and Barnes (2021b)](https://arxiv.org/abs/2104.08236).
 
 
 
@@ -127,8 +127,8 @@ This work is a collaborative effort between [Dr. Elizabeth A. Barnes](https://si
 This work was funded, in part, by the NSF AI Institute for Research on Trustworthy AI in Weather, Climate, and Coastal Oceanography ([AI2ES](https://www.ai2es.org/)).
 
 ### References for the CAN
-* Barnes, Elizabeth A. and Randal J. Barnes (2021a): Controlled abstention neural networks for identifying skillful predictions for classification problems, submitted to JAMES, 04/2021. 
-* Barnes, Elizabeth A. and Randal J. Barnes (2021b): Controlled abstention neural networks for identifying skillful predictions for regression problems, submitted to JAMES, 04/2021. 
+* Barnes, Elizabeth A. and Randal J. Barnes (2021a): Controlled abstention neural networks for identifying skillful predictions for classification problems, submitted to JAMES, 04/2021, preprint available at [https://arxiv.org/abs/2104.08281](https://arxiv.org/abs/2104.08281).
+* Barnes, Elizabeth A. and Randal J. Barnes (2021b): Controlled abstention neural networks for identifying skillful predictions for regression problems, submitted to JAMES, 04/2021, preprint available at [https://arxiv.org/abs/2104.08236](https://arxiv.org/abs/2104.08236). 
 
 ### Fundamental references for this work
 * Thulasidasan, S., T. Bhattacharya, J. Bilmes, G. Chennupati, and J. Mohd-Yusof, 2019: Combating Label Noise in Deep Learning Using Abstention. https://arxiv.org/abs/1905.10964.
