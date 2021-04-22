@@ -1,31 +1,54 @@
-"""Abstention loss function classes and associated alpha updater classes for regression.
+"""Abstention loss function classes and associated alpha updater classes for
+regression.
+
+loss function classes
+---------------------
+* AbstentionLogLoss(tf.keras.losses.Loss):
+    Regression log-loss with an abstention option based on tau. This formulation
+    also uses a PID or constant alpha as indicated by the updater.
+
+* RegressLogLoss(tf.keras.losses.Loss):
+    Abstention loss function for regression which penalized abstentions.
+
+* StandardMSE(tf.keras.losses.Loss):
+    Standard mean squared error for our 2-output regression setup.
+
+* StandardMAE(tf.keras.losses.Loss):
+    Standard mean absolute error for our 2-output regression setup.
+
+alpha updater classes
+---------------------
+* Constant(AlphaUpdater):
+      Discrete-time constant updater using moving averages of batch counts.
+
+* Colorado(AlphaUpdater):
+    Discrete-time PID updater using moving sums of batch counts.
 
 """
-import sys
 from abc import ABC, abstractmethod
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "March 21 2021"
+__date__ = "22 April 2021"
 
 # =============================================================================
 # LOSS FUNCTIONS CLASSES
 # =============================================================================
-    
+
+
 # -----------------------------------------------------------------------------
 class AbstentionLogLoss(tf.keras.losses.Loss):
-    """Regression log-loss with an abstention option based on
-       tau. This formulation also uses a PID or constant alpha as
-       indicated by the updater.
+    """Regression log-loss with an abstention option based on tau. This
+    formulation also uses a PID or constant alpha as indicated by the updater.
 
     """
-    def __init__(self, kappa, tau_fine, updater, spinup_epochs,coarse_epochs):
+    def __init__(self, kappa, tau_fine, updater, spinup_epochs, coarse_epochs):
         super().__init__()
         self.kappa = tf.constant(kappa, dtype=tf.float64)
         self.tau_fine = tf.constant(tau_fine, dtype=tf.float64)
         self.tau = tf.Variable(kappa, trainable=False, dtype=tf.float64)
-        
+
         self.updater = updater
         self.spinup_epochs = tf.constant(spinup_epochs, dtype=tf.int32)
         self.coarse_epochs = tf.constant(coarse_epochs, dtype=tf.int32)
@@ -36,94 +59,97 @@ class AbstentionLogLoss(tf.keras.losses.Loss):
         )
 
     def call(self, y_true, y_pred):
-        mean = tf.cast(y_pred[:,0], tf.float64)
-        std = tf.clip_by_value(tf.cast(y_pred[:,1], tf.float64),
+        mean = tf.cast(y_pred[:, 0], tf.float64)
+        std = tf.clip_by_value(tf.cast(y_pred[:, 1], tf.float64),
                                clip_value_min=1.0e-10,
-                               clip_value_max=1.0e10)        
-        norm_dist = tfp.distributions.Normal(mean,std)
-        
-        p = tf.cast(norm_dist.prob(tf.cast(y_true[:,0],tf.float64)), tf.float64)    # likehood of y_true    
-        p = tf.clip_by_value(p,clip_value_min=1.0e-10,clip_value_max=1.0e10)
+                               clip_value_max=1.0e10)
+        norm_dist = tfp.distributions.Normal(mean, std)
+
+        p = tf.cast(norm_dist.prob(tf.cast(y_true[:, 0], tf.float64)),
+                    tf.float64)    # likehood of y_true
+        p = tf.clip_by_value(p, clip_value_min=1.0e-10, clip_value_max=1.0e10)
 
         # set TAU
         if self.updater.current_epoch < self.spinup_epochs+self.coarse_epochs:
             self.tau.assign(self.kappa)
         else:
             self.tau.assign(self.tau_fine)
-                
+
         # determine loss function for spinup and abstention training
         if(self.updater.current_epoch < self.spinup_epochs):
-            loss = -tf.math.log(p)                                                  # standard baseline RegressLogLoss
-        else:                
-            beta = tf.math.square(tf.math.divide(self.kappa,std))              # factor of tau**2/sigma**2
-            confidence = tf.math.minimum(tf.cast(1.,tf.float64),beta)               # ensuring samples with sigma<tau are all equally weighted
-            loss = tf.math.multiply(-tf.math.log(p),confidence) - self.updater.alpha*tf.math.log(confidence)
+            # standard baseline RegressLogLoss
+            loss = -tf.math.log(p)
+        else:
+            # factor of tau**2/sigma**2
+            beta = tf.math.square(tf.math.divide(self.kappa, std))
 
-            
+            # ensuring samples with sigma<tau are all equally weighted
+            confidence = tf.math.minimum(tf.cast(1., tf.float64), beta)
+            loss = (tf.math.multiply(-tf.math.log(p), confidence)
+                    - self.updater.alpha*tf.math.log(confidence))
+
         self.updater.update(y_pred, self.tau)
         return tf.reduce_mean(loss, axis=-1)
-    
+
+
 # -----------------------------------------------------------------------------
 class RegressLogLoss(tf.keras.losses.Loss):
-    """Abstention loss function for regression which 
-       penalized abstentions.
+    """Abstention loss function for regression which penalized abstentions.
+
     """
     def __init__(self,):
         super().__init__()
 
     def __str__(self):
-        return (
-            f"RegressBaseline()"
-        )
+        return ("RegressBaseline()")
 
     def call(self, y_true, y_pred):
-        mean = tf.cast(y_pred[:,0], tf.float64)
-        std = tf.clip_by_value(tf.cast(y_pred[:,1], tf.float64),
+        mean = tf.cast(y_pred[:, 0], tf.float64)
+        std = tf.clip_by_value(tf.cast(y_pred[:, 1], tf.float64),
                                clip_value_min=1.0e-10,
-                               clip_value_max=1.0e10)        
-        norm_dist = tfp.distributions.Normal(mean,std)
-        
-        p = tf.cast(norm_dist.prob(tf.cast(y_true[:,0],tf.float64)), tf.float64)    # likehood of y_true    
-        p = tf.clip_by_value(p,clip_value_min=1.0e-10,clip_value_max=1.0e10)
-        
+                               clip_value_max=1.0e10)
+        norm_dist = tfp.distributions.Normal(mean, std)
+
+        # likehood of y_true
+        p = tf.cast(norm_dist.prob(tf.cast(y_true[:, 0], tf.float64)), tf.float64)
+        p = tf.clip_by_value(p, clip_value_min=1.0e-10, clip_value_max=1.0e10)
+
         loss = -tf.math.log(p)
-        return tf.reduce_mean(loss, axis=-1)   
-    
+        return tf.reduce_mean(loss, axis=-1)
+
+
 # -----------------------------------------------------------------------------
 class StandardMSE(tf.keras.losses.Loss):
     """Standard mean squared error for our 2-output regression setup.
+
     """
     def __init__(self,):
         super().__init__()
 
     def __str__(self):
-        return (
-            f"StandardMSE()"
-        )
+        return ("StandardMSE()")
 
     def call(self, y_true, y_pred):
-        
-        error = tf.cast(y_pred[:,0] - y_true[:,0],tf.float64)
+        error = tf.cast(y_pred[:, 0] - y_true[:, 0], tf.float64)
         loss = tf.math.square(error)
-        return tf.reduce_mean(loss, axis=-1)     
-    
+        return tf.reduce_mean(loss, axis=-1)
+
+
 # -----------------------------------------------------------------------------
 class StandardMAE(tf.keras.losses.Loss):
     """Standard mean absolute error for our 2-output regression setup.
+
     """
     def __init__(self,):
         super().__init__()
 
     def __str__(self):
-        return (
-            f"StandardMSE()"
-        )
+        return ("StandardMSE()")
 
     def call(self, y_true, y_pred):
-        
-        error = tf.cast(y_pred[:,0] - y_true[:,0],tf.float64)
+        error = tf.cast(y_pred[:, 0] - y_true[:, 0], tf.float64)
         loss = tf.math.abs(error)
-        return tf.reduce_mean(loss, axis=-1)       
+        return tf.reduce_mean(loss, axis=-1)
 
 
 # =============================================================================
@@ -175,7 +201,8 @@ class AlphaUpdater(ABC):
     @abstractmethod
     def update(self, y_pred):
         raise NotImplementedError()
-        
+
+
 # -----------------------------------------------------------------------------
 class Constant(AlphaUpdater):
     """Discrete-time constant updater using moving averages of batch counts.
@@ -192,14 +219,16 @@ class Constant(AlphaUpdater):
 
     def __str__(self):
         return(
-            f"Colorado("
+            "Colorado("
             + f"setpoint={self.setpoint}, "
             + f"alpha_init={self.alpha_init}, "
         )
 
     def update(self, y_pred, tau):
-        self.alpha.assign(tf.cast(self.alpha_init,tf.float64))
+        self.alpha.assign(tf.cast(self.alpha_init, tf.float64))
 
+
+# -----------------------------------------------------------------------------
 class Colorado(AlphaUpdater):
     """Discrete-time PID updater using moving averages of batch counts.
 
@@ -237,12 +266,31 @@ class Colorado(AlphaUpdater):
     * clip_at[0] < 0 < clip_at[1]
     * length >= 1
 
+    Notes
+    -----
+    * We can relate the components of the three K tuning parameters to the
+    standard PID parameters as
+
+        [ 0  1 -2 ]   [ k[0] ]           [ 1      ]
+        [ 1 -1  1 ] * [ k[1] ]  =  K_p * [ dt/T_i ]
+        [ 0  0  1 ]   [ k[2] ]           [ T_d/dt ]
+
+    or equivalently
+
+              [ 1  1  1 ]   [ 1      ]     [ k[0] ]
+        K_p * [ 1  0  2 ] * [ dt/T_i ]  =  [ k[1] ]
+              [ 0  0  1 ]   [ T_d/dt ]     [ k[2] ]
+
+    References
+    ----------
+    * Visioli, A, 2006, Practical PID Control, Springer, ISBN-13: 9781846285851.
+
     """
     def __init__(
         self,
         setpoint,
         alpha_init,
-        length=10,        
+        length=10,
         k=(0.50, 0.25, 0.05),       # These need to be tuned for each data set
         clip_at=(-1.0, 1.0),
     ):
@@ -252,15 +300,15 @@ class Colorado(AlphaUpdater):
         self.clip_at = tf.constant(clip_at, dtype=tf.float64)
         self.length = tf.constant(length, dtype=tf.int32)
 
-        self.batch_votes       = CyclicQueue(length)
+        self.batch_votes = CyclicQueue(length)
         self.batch_abstentions = CyclicQueue(length)
 
-        self.previous_error    = tf.Variable(0.0, trainable=False, dtype=tf.float64)
+        self.previous_error = tf.Variable(0.0, trainable=False, dtype=tf.float64)
         self.penultimate_error = tf.Variable(0.0, trainable=False, dtype=tf.float64)
 
     def __str__(self):
         return(
-            f"Colorado("
+            "Colorado("
             + f"setpoint={self.setpoint}, "
             + f"alpha_init={self.alpha_init}, "
             + f"k={self.k}, "
@@ -269,10 +317,9 @@ class Colorado(AlphaUpdater):
         )
 
     def update(self, y_pred, tau):
-        
-        abstentions = tf.math.greater_equal(tf.cast(y_pred[:,1],tf.float64),tau)
-        votes = tf.math.less(tf.cast(y_pred[:,1],tf.float64),self.alpha)
-        
+        abstentions = tf.math.greater_equal(tf.cast(y_pred[:, 1], tf.float64), tau)
+        votes = tf.math.less(tf.cast(y_pred[:, 1], tf.float64), self.alpha)
+
         self.batch_votes.put(tf.math.count_nonzero(votes, dtype=tf.int32))
         self.batch_abstentions.put(tf.math.count_nonzero(abstentions, dtype=tf.int32))
 
@@ -293,11 +340,13 @@ class Colorado(AlphaUpdater):
         self.penultimate_error.assign(self.previous_error)
         self.previous_error.assign(error)
 
-        
+
 # =============================================================================
 # CYCLIC QUEUE
 # =============================================================================
 
+
+# -----------------------------------------------------------------------------
 class CyclicQueue:
     """A tensorflow-compatable, cyclic queue.
 

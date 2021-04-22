@@ -1,4 +1,5 @@
-"""Abstention loss function classes and associated alpha updater classes.
+"""Abstention loss function classes and associated alpha updater classes for
+classification.
 
 loss function classes
 ---------------------
@@ -37,7 +38,7 @@ from abc import ABC, abstractmethod
 import tensorflow as tf
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "23 January 2021"
+__date__ = "22 April 2021"
 
 # =============================================================================
 # DAC ABSTENTION LOSS FUNCTIONS CLASSES
