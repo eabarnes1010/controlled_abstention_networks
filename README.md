@@ -87,12 +87,11 @@ General options for different loss functions and PID controller methods are brie
 loss function classes
 ---------------------
 * AbstentionLogLoss(tf.keras.losses.Loss):
-    Abstention loss function that highlights being "not wrong", rather than
-    being right, while penalizing abstentions.
+    Regression log-loss with an abstention option based on tau. This formulation
+    also uses a PID or constant alpha as indicated by the updater.
     
 * RegressLogLoss(tf.keras.losses.Loss):
-    Abstention loss function that highlights being "not wrong", rather than
-    being right, while penalizing abstentions.    
+    Baseline regression log-loss that includes uncertainty via a 2-output regression setup.
 
 alpha updater classes
 ---------------------

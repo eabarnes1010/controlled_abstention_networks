@@ -8,7 +8,7 @@ loss function classes
     also uses a PID or constant alpha as indicated by the updater.
 
 * RegressLogLoss(tf.keras.losses.Loss):
-    Abstention loss function for regression which penalized abstentions.
+    Baseline regression log-loss that includes uncertainty via a 2-output regression setup.
 
 * StandardMSE(tf.keras.losses.Loss):
     Standard mean squared error for our 2-output regression setup.
@@ -94,7 +94,7 @@ class AbstentionLogLoss(tf.keras.losses.Loss):
 
 # -----------------------------------------------------------------------------
 class RegressLogLoss(tf.keras.losses.Loss):
-    """Abstention loss function for regression which penalized abstentions.
+    """Baseline regression log-loss that includes uncertainty via a 2-output regression setup.
 
     """
     def __init__(self,):
