@@ -1,4 +1,5 @@
 # Controlled Abstention Networks (CAN): classification & regression tasks
+[![DOI](https://zenodo.org/badge/359432330.svg)](https://zenodo.org/badge/latestdoi/359432330)
 ***
 Deep neural networks for classification and regression tasks are trained with novel abstention losses such that that they can say "IDK" (I Don't Know) when they are not confident. Unlike many methods for attaching uncertainty to neural network predictions post-training, the abstention loss is applied during training to identify, and preferentially learn from, the more confident samples - leading to more accurate predictions.
 
